@@ -50,7 +50,7 @@ void *ucalloc(size_t size)
 	return ptr;
 }
 
-void free(void *ptr)
+void ufree(void *ptr)
 {
 	header_t *curr, *prev = NULL;
 
@@ -118,7 +118,7 @@ void *urealloc(void *ptr, size_t size)
 	
 	buff = umalloc(size);
 	memcpy(buff, ptr, SIZE(curr->size));
-	free(ptr);
+	ufree(ptr);
 	
 	return buff;
 }

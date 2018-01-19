@@ -4,19 +4,19 @@ CROSS ?=
 LIB = ualloc
 TEST = test
 
-CFLAGS = -O2 -Wall -Werror -DUALLOC_NO_LIBC -DUALLOC_BSS
+CFLAGS = -O0 -g -Wall -Werror -DUALLOC_BSS=16768 #-DUALLOC_NO_LIBC
 
-$(TEST): test.o ualloc.a
-	$(CROSS)$(CC) $^ -o $@
+all: test.o ualloc.a
+	$(CROSS)$(CC) $(CFLAGS) $^ -o $(TEST)
 
 test.o: test.c
-	$(CROSS)$(CC) -c $< -o $@
+	$(CROSS)$(CC) $(CFLAGS) -c $< -o $@
 
 ualloc.a: ualloc.o
 	$(CROSS)$(AR) rcs $@ $^
 
 ualloc.o: ualloc.c
-	$(CROSS)$(CC) -c -o $@ $<
+	$(CROSS)$(CC) $(CFLAGS) -c -o $@ $<
 
 clean:
 	rm -f *.o *.a $(LIB) $(TEST)

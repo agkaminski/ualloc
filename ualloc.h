@@ -30,6 +30,8 @@ extern void *ucalloc(size_t size);
 
 extern void *urealloc(void *ptr, size_t size);
 
-extern void free(void *ptr);
+extern void ufree(void *ptr);
+
+extern void ualloc_init(void *start, size_t size);
 
 #endif
