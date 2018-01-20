@@ -32,6 +32,6 @@ extern void *urealloc(void *ptr, size_t size);
 
 extern void ufree(void *ptr);
 
-extern void ualloc_init(void *start, size_t size);
+extern void ualloc_init(void *buff, size_t size);
 
 #endif

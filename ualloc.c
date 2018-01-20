@@ -1,12 +1,9 @@
 #include "ualloc.h"
 
-#ifdef UALLOC_BSS
-static unsigned char bssheap[UALLOC_BSS];
-#endif
-
 #define FLAG_MASK  (1UL << ((sizeof(size_t) << 3) - 1))
 #define FLAG(size) !!((size) & FLAG_MASK)
 #define SIZE(size) ((size) & ~FLAG_MASK)
+#define ANTIFRAG   8
 
 static unsigned char *heap;
 
@@ -19,21 +16,29 @@ void *umalloc(size_t size)
 {
 	header_t *curr, *t;
 
-	if (FLAG(size))
+	if (FLAG(size) || !size)
 		return NULL;
 
-	curr = (header_t *)heap;
+	if (size < ANTIFRAG)
+		size = ANTIFRAG;
 
 	for (curr = (header_t *)heap; curr != NULL; curr = curr->next) {
-		if (!FLAG(curr->size) && SIZE(curr->size) >= size + sizeof(header_t)) {
-			t = curr + size + sizeof(header_t);
-			t->next = curr->next;
-			t->size = (SIZE(curr->size) - size - sizeof(header_t)) | FLAG_MASK;
+		if (!FLAG(curr->size)) {
+			if (SIZE(curr->size) >= size + sizeof(header_t) + ANTIFRAG) {
+				t = (void *)curr + size + sizeof(header_t);
+				t->next = curr->next;
+				t->size = (SIZE(curr->size) - size - sizeof(header_t)) & ~FLAG_MASK;
 
-			curr->size = size & ~FLAG_MASK;
-			curr->next = t;
+				curr->size = size | FLAG_MASK;
+				curr->next = t;
 
-			return curr + sizeof(header_t);
+				return (void *)curr + sizeof(header_t);
+			}
+			else if (SIZE(curr->size >= size)) {
+				curr->size |= FLAG_MASK;
+
+				return (void *)curr + sizeof(header_t);
+			}
 		}
 	}
 
@@ -55,18 +60,20 @@ void ufree(void *ptr)
 	header_t *curr, *prev = NULL;
 
 	for (curr = (header_t *)heap; curr != NULL; prev = curr, curr = curr->next) {
-		if (curr + sizeof(header_t) == ptr) {
-			if (prev != NULL && FLAG(prev->size)) {
+		if ((void *)curr + sizeof(header_t) == ptr) {
+			if (prev != NULL && !FLAG(prev->size)) {
 				prev->size = SIZE(prev->size) + SIZE(curr->size) + sizeof(header_t);
 				prev->next = curr->next;
+				curr = prev;
 			}
-			else if (curr->next != NULL && FLAG(curr->size)) {
+
+			if (curr->next != NULL && !FLAG(curr->next->size)) {
 				curr->size = SIZE(curr->size) + SIZE(curr->next->size) + sizeof(header_t);
 				curr->next = curr->next->next;
 			}
-			else {
-				curr->size &= ~FLAG_MASK;
-			}
+
+			curr->size &= ~FLAG_MASK;
+
 			break;
 		}
 	}
@@ -85,14 +92,14 @@ void *urealloc(void *ptr, size_t size)
 		return umalloc(size);
 	
 	for (curr = (header_t *)heap; curr != NULL; curr = curr->next) {
-		if (curr + sizeof(header_t) == ptr) {
+		if ((void *)curr + sizeof(header_t) == ptr) {
 			if (!FLAG(curr->next->size)) {
 				if ((t = SIZE(curr->size) + SIZE(curr->next->size) + sizeof(header_t)) >= size) {
 					curr->size = size | FLAG_MASK;
 					curr->next = curr->next->next;
 					
-					if (t > size + sizeof(header_t) + 8) {
-						spawn = curr + sizeof(header_t) + size;
+					if (t > size + sizeof(header_t) + ANTIFRAG) {
+						spawn = (void *)curr + sizeof(header_t) + size;
 						spawn->next = curr->next;
 						spawn->size = t - size;
 						curr->next = spawn;
@@ -101,7 +108,7 @@ void *urealloc(void *ptr, size_t size)
 						curr->size = t | FLAG_MASK;
 					}
 					
-					return curr + sizeof(header_t);
+					return (void *)curr + sizeof(header_t);
 				}
 				else {
 					break;
@@ -123,20 +130,13 @@ void *urealloc(void *ptr, size_t size)
 	return buff;
 }
 
-void ualloc_init(void *start, size_t size)
+void ualloc_init(void *buff, size_t size)
 {
-	size_t heapsz;
 	header_t *header;
 
-#ifdef UALLOC_BSS
-	heap = bssheap;
-	heapsz = UALLOC_BSS;
-#else
-	heap = start;
-	heapsz = size;
-#endif
+	heap = buff;
+	header = (header_t *)buff;
 
-	header = (header_t *)heap;
-	header->size = (heapsz - sizeof(header_t)) & ~FLAG_MASK;
+	header->size = (size - sizeof(header_t)) & ~FLAG_MASK;
 	header->next = NULL;
 }

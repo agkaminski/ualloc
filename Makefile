@@ -4,7 +4,7 @@ CROSS ?=
 LIB = ualloc
 TEST = test
 
-CFLAGS = -O0 -g -Wall -Werror -DUALLOC_BSS=16768 #-DUALLOC_NO_LIBC
+CFLAGS = -O2 -Wall -Werror #-DUALLOC_NO_LIBC
 
 all: test.o ualloc.a
 	$(CROSS)$(CC) $(CFLAGS) $^ -o $(TEST)
