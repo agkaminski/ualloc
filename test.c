@@ -6,7 +6,7 @@
 
 #define NELEMS(x) (sizeof(x) / sizeof(x[0]))
 
-char heap[16768];
+char heap[64 * 1024];
 
 char *ptr[128];
 size_t size[128];
@@ -44,6 +44,8 @@ void heap_show(void *heap)
 int main(void)
 {
 	int i, pos, err = 0;
+	void *tptr;
+	size_t tsz;
 
 	ualloc_init(heap, sizeof(heap));
 	srand(1);
@@ -77,8 +79,11 @@ int main(void)
 
 	printf("Special cases\n");
 	printf("Free all\n");
-	for (i = 0; i < NELEMS(ptr); ++i)
+	for (i = 0; i < NELEMS(ptr); ++i) {
 		ufree(ptr[i]);
+		ptr[i] = NULL;
+		size[i] = 0;
+	}
 
 	heap_show(heap);
 
@@ -97,6 +102,37 @@ int main(void)
 	ptr[0] = umalloc(sizeof(heap));
 
 	heap_show(heap);
+
+	printf("Test urealloc\n");
+
+	for (i = 0; i < 10000; ++i) {
+		pos = rand() % NELEMS(ptr);
+
+		printf("%d: Is %p (%zu bytes), ", pos, ptr[pos], size[pos]);
+
+		tsz = rand() & 0x3ff;
+		tptr = urealloc(ptr[pos], tsz);
+
+		printf("alocated %zu bytes, got %p\n", tsz, tptr);
+
+		if (tsz == 0) {
+			ptr[pos] = NULL;
+			size[pos] = 0;
+		}
+
+		if (tptr == NULL)
+			continue;
+
+		size[pos] = tsz;
+		ptr[pos] = tptr;
+
+		memset(ptr[pos], pos, size[pos]);
+
+		heap_show(heap);
+
+		if ((err = check()) != 0)
+			break;
+	}
 
 	return 0;
 }
