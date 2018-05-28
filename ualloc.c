@@ -1,6 +1,6 @@
 #include "ualloc.h"
 
-#define FLAG_MASK  (1UL << ((sizeof(size_t) << 3) - 1))
+#define FLAG_MASK  (1UL)
 #define FLAG(size) !!((size) & FLAG_MASK)
 #define SIZE(size) ((size) & ~FLAG_MASK)
 #define ANTIFRAG   8
@@ -24,7 +24,7 @@ void *umalloc(size_t size)
 	if (FLAG(size) || !size)
 		return NULL;
 
-	size = (size < ANTIFRAG) ? ANTIFRAG : align(size);
+	size = align(size);
 
 	for (curr = (header_t *)heap; curr != NULL; curr = curr->next) {
 		if (!FLAG(curr->size) && SIZE(curr->size) >= size) {
@@ -87,16 +87,13 @@ void *urealloc(void *ptr, size_t size)
 	header_t *curr, *spawn;
 	unsigned char *buff;
 	size_t t;
-	
-	if (FLAG(size))
-		return NULL;
 
 	if (!size) {
 		ufree(ptr);
 		return NULL;
 	}
 
-	size = (size < ANTIFRAG) ? ANTIFRAG : align(size);
+	size = align(size);
 	
 	if (ptr == NULL)
 		return umalloc(size);

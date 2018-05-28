@@ -38,14 +38,14 @@ void heap_show(void *heap)
 	} *header;
 
 	for (header = heap; header != NULL; header = header->next)
-		printf("\t%p: [%zu, %s]\n", header, header->size & 0xffffffff, header->size > 0xffffffff ? "USED" : "FREE");
+		printf("\t%p: [%zu, %s]\n", header, header->size & 0xfffffffeUL, header->size & 1 ? "USED" : "FREE");
 }
 
 int main(void)
 {
 	int i, pos, err = 0;
 	void *tptr;
-	size_t tsz;
+	size_t tsz, prev;
 
 	ualloc_init(heap, sizeof(heap));
 	srand(1);
@@ -109,11 +109,18 @@ int main(void)
 		pos = rand() % NELEMS(ptr);
 
 		printf("%d: Is %p (%zu bytes), ", pos, ptr[pos], size[pos]);
+		
+		prev = size[pos];
 
 		tsz = rand() & 0x3ff;
 		tptr = urealloc(ptr[pos], tsz);
 
 		printf("alocated %zu bytes, got %p\n", tsz, tptr);
+		
+		if (tptr == NULL && tsz != 0 && ptr[pos] != NULL && prev >= tsz) {
+			printf("urealloc failed (prev >= curr && NULL)\n");
+			break;
+		}
 
 		if (tsz == 0) {
 			ptr[pos] = NULL;
