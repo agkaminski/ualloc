@@ -2,6 +2,7 @@
 #define _UALLOC_H_
 
 #ifdef UALLOC_NO_LIBC
+#define NULL 0
 typedef unsigned int size_t;
 
 static inline void *memcpy(void *dest, void *src, size_t n)

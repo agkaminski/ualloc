@@ -29,7 +29,7 @@ void *umalloc(size_t size)
 	for (curr = (header_t *)heap; curr != NULL; curr = curr->next) {
 		if (!FLAG(curr->size) && SIZE(curr->size) >= size) {
 			if (SIZE(curr->size) >= size + sizeof(header_t) + ANTIFRAG) {
-				t = (void *)curr + size + sizeof(header_t);
+				t = (void *)((char *)curr + size + sizeof(header_t));
 				t->next = curr->next;
 				t->size = (SIZE(curr->size) - size - sizeof(header_t)) & ~FLAG_MASK;
 
@@ -39,7 +39,7 @@ void *umalloc(size_t size)
 
 			curr->size |= FLAG_MASK;
 
-			return (void *)curr + sizeof(header_t);
+			return (void *)((char *)curr + sizeof(header_t));
 		}
 	}
 
@@ -61,7 +61,7 @@ void ufree(void *ptr)
 	header_t *curr, *prev = NULL;
 
 	for (curr = (header_t *)heap; curr != NULL; prev = curr, curr = curr->next) {
-		if ((void *)curr + sizeof(header_t) == ptr)
+		if ((void *)((char *)curr + sizeof(header_t)) == ptr)
 			break;
 	}
 
@@ -99,7 +99,7 @@ void *urealloc(void *ptr, size_t size)
 		return umalloc(size);
 	
 	for (curr = (header_t *)heap; curr != NULL; curr = curr->next) {
-		if ((void *)curr + sizeof(header_t) == ptr)
+		if ((void *)((char *)curr + sizeof(header_t)) == ptr)
 			break;
 	}
 
@@ -108,7 +108,7 @@ void *urealloc(void *ptr, size_t size)
 
 	if (SIZE(curr->size) >= size) {
 		if (SIZE(curr->size) > size + sizeof(header_t) + ANTIFRAG) {
-			spawn = (void *)curr + size + sizeof(header_t);
+			spawn = (void *)((char *)curr + size + sizeof(header_t));
 			spawn->next = curr->next;
 			spawn->size = SIZE(curr->size) - size - sizeof(header_t);
 			curr->size = size | FLAG_MASK;
@@ -130,13 +130,13 @@ void *urealloc(void *ptr, size_t size)
 
 		if (t > size + sizeof(header_t) + ANTIFRAG) {
 			curr->size = size | FLAG_MASK;
-			spawn = (void *)curr + sizeof(header_t) + size;
+			spawn = (void *)((char *)curr + sizeof(header_t) + size);
 			spawn->next = curr->next;
 			spawn->size = t - size - sizeof(header_t);
 			curr->next = spawn;
 		}
 
-		return (void *)curr + sizeof(header_t);
+		return (void *)((char *)curr + sizeof(header_t));
 	}
 	
 	if ((buff = umalloc(size)) == NULL)
