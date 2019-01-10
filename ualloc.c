@@ -21,7 +21,7 @@ void *umalloc(size_t size)
 {
 	header_t *curr, *t;
 
-	if (FLAG(size) || !size)
+	if (!size)
 		return NULL;
 
 	size = align(size);
