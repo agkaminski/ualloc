@@ -19,7 +19,7 @@ static inline size_t align(size_t size)
 
 void *umalloc(size_t size)
 {
-	header_t *curr, *t;
+	header_t *curr, *spawn;
 
 	if (!size)
 		return NULL;
@@ -29,12 +29,12 @@ void *umalloc(size_t size)
 	for (curr = (header_t *)heap; curr != NULL; curr = curr->next) {
 		if (!FLAG(curr->size) && SIZE(curr->size) >= size) {
 			if (SIZE(curr->size) >= size + sizeof(header_t) + ANTIFRAG) {
-				t = (void *)((char *)curr + size + sizeof(header_t));
-				t->next = curr->next;
-				t->size = (SIZE(curr->size) - size - sizeof(header_t)) & ~FLAG_MASK;
+				spawn = (void *)((char *)curr + size + sizeof(header_t));
+				spawn->next = curr->next;
+				spawn->size = (SIZE(curr->size) - size - sizeof(header_t)) & ~FLAG_MASK;
 
 				curr->size = size;
-				curr->next = t;
+				curr->next = spawn;
 			}
 
 			curr->size |= FLAG_MASK;
@@ -61,25 +61,23 @@ void ufree(void *ptr)
 	header_t *curr, *prev = NULL;
 
 	for (curr = (header_t *)heap; curr != NULL; prev = curr, curr = curr->next) {
-		if ((void *)((char *)curr + sizeof(header_t)) == ptr)
+		if ((void *)((char *)curr + sizeof(header_t)) == ptr) {
+			if (prev != NULL && !FLAG(prev->size)) {
+				prev->size = SIZE(prev->size) + SIZE(curr->size) + sizeof(header_t);
+				prev->next = curr->next;
+				curr = prev;
+			}
+
+			if (curr->next != NULL && !FLAG(curr->next->size)) {
+				curr->size = SIZE(curr->size) + SIZE(curr->next->size) + sizeof(header_t);
+				curr->next = curr->next->next;
+			}
+
+			curr->size &= ~FLAG_MASK;
+
 			break;
+		}
 	}
-
-	if (curr == NULL)
-		return;
-
-	if (prev != NULL && !FLAG(prev->size)) {
-		prev->size = SIZE(prev->size) + SIZE(curr->size) + sizeof(header_t);
-		prev->next = curr->next;
-		curr = prev;
-	}
-
-	if (curr->next != NULL && !FLAG(curr->next->size)) {
-		curr->size = SIZE(curr->size) + SIZE(curr->next->size) + sizeof(header_t);
-		curr->next = curr->next->next;
-	}
-
-	curr->size &= ~FLAG_MASK;
 }
 
 void *urealloc(void *ptr, size_t size)
@@ -138,12 +136,11 @@ void *urealloc(void *ptr, size_t size)
 
 		return (void *)((char *)curr + sizeof(header_t));
 	}
-	
-	if ((buff = umalloc(size)) == NULL)
-		return NULL;
 
-	memcpy(buff, ptr, SIZE(curr->size));
-	ufree(ptr);
+	if ((buff = umalloc(size)) != NULL) {
+		memcpy(buff, ptr, SIZE(curr->size));
+		ufree(ptr);
+	}
 	
 	return buff;
 }
