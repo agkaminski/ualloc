@@ -10,6 +10,7 @@ static unsigned char *heap;
 typedef struct _header_t {
 	size_t size;
 	struct _header_t *next;
+	unsigned char payload[0];
 } header_t;
 
 static inline size_t align(size_t size)
@@ -39,7 +40,7 @@ void *umalloc(size_t size)
 
 			curr->size |= FLAG_MASK;
 
-			return (void *)((char *)curr + sizeof(header_t));
+			return (void *)curr->payload;
 		}
 	}
 
@@ -49,10 +50,10 @@ void *umalloc(size_t size)
 void *ucalloc(size_t size)
 {
 	void *ptr = umalloc(size);
-	
+
 	if (ptr != NULL)
 		memset(ptr, 0, size);
-	
+
 	return ptr;
 }
 
@@ -92,12 +93,12 @@ void *urealloc(void *ptr, size_t size)
 	}
 
 	size = align(size);
-	
+
 	if (ptr == NULL)
 		return umalloc(size);
-	
+
 	for (curr = (header_t *)heap; curr != NULL; curr = curr->next) {
-		if ((void *)((char *)curr + sizeof(header_t)) == ptr)
+		if ((void *)curr->payload == ptr)
 			break;
 	}
 
@@ -128,30 +129,28 @@ void *urealloc(void *ptr, size_t size)
 
 		if (t > size + sizeof(header_t) + ANTIFRAG) {
 			curr->size = size | FLAG_MASK;
-			spawn = (void *)((char *)curr + sizeof(header_t) + size);
+			spawn = (void *)(curr->payload + size);
 			spawn->next = curr->next;
 			spawn->size = t - size - sizeof(header_t);
 			curr->next = spawn;
 		}
 
-		return (void *)((char *)curr + sizeof(header_t));
+		return (void *)curr->payload;
 	}
 
 	if ((buff = umalloc(size)) != NULL) {
 		memcpy(buff, ptr, SIZE(curr->size));
 		ufree(ptr);
 	}
-	
+
 	return buff;
 }
 
 void ualloc_init(void *buff, size_t size)
 {
-	header_t *header;
+	header_t *header = (header_t *)buff;
 
 	heap = buff;
-	header = (header_t *)buff;
-
 	header->size = (size - sizeof(header_t)) & ~FLAG_MASK;
 	header->next = NULL;
 }
