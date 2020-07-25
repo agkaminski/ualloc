@@ -5,13 +5,14 @@
 #define SIZE(size) ((size) & ~FLAG_MASK)
 #define ANTIFRAG   8
 
-static unsigned char *heap;
-
 typedef struct _header_t {
 	size_t size;
 	struct _header_t *next;
 	unsigned char payload[0];
 } header_t;
+
+static header_t *heap = NULL;
+static header_t *hint = NULL;
 
 static inline size_t align(size_t size)
 {
@@ -22,15 +23,15 @@ void *umalloc(size_t size)
 {
 	header_t *curr, *spawn;
 
-	if (!size)
+	if (!size || heap == NULL)
 		return NULL;
 
 	size = align(size);
 
-	for (curr = (header_t *)heap; curr != NULL; curr = curr->next) {
+	for (curr = hint; curr != NULL; curr = curr->next) {
 		if (!FLAG(curr->size) && SIZE(curr->size) >= size) {
 			if (SIZE(curr->size) >= size + sizeof(header_t) + ANTIFRAG) {
-				spawn = (void *)((char *)curr + size + sizeof(header_t));
+				spawn = (void *)(curr->payload + size);
 				spawn->next = curr->next;
 				spawn->size = (SIZE(curr->size) - size - sizeof(header_t)) & ~FLAG_MASK;
 
@@ -61,8 +62,11 @@ void ufree(void *ptr)
 {
 	header_t *curr, *prev = NULL;
 
+	if (heap == NULL)
+		return;
+
 	for (curr = (header_t *)heap; curr != NULL; prev = curr, curr = curr->next) {
-		if ((void *)((char *)curr + sizeof(header_t)) == ptr) {
+		if ((void *)curr->payload == ptr) {
 			if (prev != NULL && !FLAG(prev->size)) {
 				prev->size = SIZE(prev->size) + SIZE(curr->size) + sizeof(header_t);
 				prev->next = curr->next;
@@ -76,6 +80,9 @@ void ufree(void *ptr)
 
 			curr->size &= ~FLAG_MASK;
 
+			if (curr < hint)
+				hint = curr;
+
 			break;
 		}
 	}
@@ -87,6 +94,9 @@ void *urealloc(void *ptr, size_t size)
 	unsigned char *buff;
 	size_t t;
 
+	if (heap == NULL)
+		return NULL;
+
 	if (!size) {
 		ufree(ptr);
 		return NULL;
@@ -97,17 +107,11 @@ void *urealloc(void *ptr, size_t size)
 	if (ptr == NULL)
 		return umalloc(size);
 
-	for (curr = (header_t *)heap; curr != NULL; curr = curr->next) {
-		if ((void *)curr->payload == ptr)
-			break;
-	}
-
-	if (curr == NULL)
-		return umalloc(size);
+	curr = (header_t *)(ptr - sizeof(header_t));
 
 	if (SIZE(curr->size) >= size) {
 		if (SIZE(curr->size) > size + sizeof(header_t) + ANTIFRAG) {
-			spawn = (void *)((char *)curr + size + sizeof(header_t));
+			spawn = (void *)(curr->payload + size);
 			spawn->next = curr->next;
 			spawn->size = SIZE(curr->size) - size - sizeof(header_t);
 			curr->size = size | FLAG_MASK;
@@ -117,6 +121,9 @@ void *urealloc(void *ptr, size_t size)
 				spawn->size = SIZE(spawn->size) + SIZE(spawn->next->size) + sizeof(header_t);
 				spawn->next = spawn->next->next;
 			}
+
+			if (spawn < hint)
+				hint = spawn;
 		}
 
 		return ptr;
@@ -148,9 +155,8 @@ void *urealloc(void *ptr, size_t size)
 
 void ualloc_init(void *buff, size_t size)
 {
-	header_t *header = (header_t *)buff;
-
 	heap = buff;
-	header->size = (size - sizeof(header_t)) & ~FLAG_MASK;
-	header->next = NULL;
+	heap->size = (size - sizeof(header_t)) & ~FLAG_MASK;
+	heap->next = NULL;
+	hint = heap;
 }
