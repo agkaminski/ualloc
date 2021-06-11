@@ -28,6 +28,9 @@ void *umalloc(size_t size)
 
 	size = align(size);
 
+	if (hint == NULL)
+		hint = heap;
+
 	for (curr = hint; curr != NULL; curr = curr->next) {
 		if (!FLAG(curr->size) && SIZE(curr->size) >= size) {
 			if (SIZE(curr->size) >= size + sizeof(header_t) + ANTIFRAG) {
@@ -40,6 +43,9 @@ void *umalloc(size_t size)
 			}
 
 			curr->size |= FLAG_MASK;
+
+			if (curr == hint)
+				hint = curr->next;
 
 			return (void *)curr->payload;
 		}
@@ -130,7 +136,11 @@ void *urealloc(void *ptr, size_t size)
 	}
 
 	if (curr->next != NULL && !FLAG(curr->next->size) &&
-		(t = SIZE(curr->size) + SIZE(curr->next->size) + sizeof(header_t)) >= size) {
+			(t = SIZE(curr->size) + SIZE(curr->next->size) + sizeof(header_t)) >= size) {
+
+		if (curr->next == hint)
+			hint = curr->next->next;
+
 		curr->size = t | FLAG_MASK;
 		curr->next = curr->next->next;
 
@@ -139,6 +149,10 @@ void *urealloc(void *ptr, size_t size)
 			spawn = (void *)(curr->payload + size);
 			spawn->next = curr->next;
 			spawn->size = t - size - sizeof(header_t);
+
+			if (curr->next == hint)
+				hint = spawn;
+
 			curr->next = spawn;
 		}
 
