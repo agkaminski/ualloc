@@ -113,7 +113,7 @@ void *urealloc(void *ptr, size_t size)
 	if (ptr == NULL)
 		return umalloc(size);
 
-	curr = (header_t *)(ptr - sizeof(header_t));
+	curr = (header_t *)((unsigned char *)ptr - sizeof(header_t));
 
 	if (SIZE(curr->size) >= size) {
 		if (SIZE(curr->size) > size + sizeof(header_t) + ANTIFRAG) {
