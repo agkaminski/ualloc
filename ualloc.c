@@ -5,10 +5,14 @@
 #define SIZE(size) ((size) & ~FLAG_MASK)
 #define ANTIFRAG   8
 
+#ifdef __CC65__
+#define inline
+#endif
+
 typedef struct _header_t {
 	size_t size;
 	struct _header_t *next;
-	unsigned char payload[0];
+	unsigned char payload[];
 } header_t;
 
 static header_t *heap = NULL;
