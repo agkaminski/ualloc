@@ -1,6 +1,6 @@
 CC = gcc
 AR = ar
-CROSS ?= 
+CROSS ?=
 LIB = ualloc
 TEST = test
 
@@ -12,10 +12,10 @@ all: test.o ualloc.a
 test.o: test.c
 	$(CROSS)$(CC) $(CFLAGS) -c $< -o $@
 
-ualloc.a: ualloc.o
+ualloc.a: ualloc_init.o umalloc.o ufree.o ucalloc.o urealloc.o
 	$(CROSS)$(AR) rcs $@ $^
 
-ualloc.o: ualloc.c
+*.o: *.c
 	$(CROSS)$(CC) $(CFLAGS) -c -o $@ $<
 
 clean:
