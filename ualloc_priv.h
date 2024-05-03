@@ -14,6 +14,8 @@
 #define SIZE(size) ((size) & ~FLAG_MASK)
 #define ANTIFRAG   8
 
+#define ALIGN(size) ((size) + ANTIFRAG - 1) & ~(ANTIFRAG - 1)
+
 #ifdef __CC65__
 #define inline
 #endif
@@ -26,10 +28,5 @@ typedef struct _header_t {
 
 extern header_t *ualloc_heap;
 extern header_t *ualloc_hint;
-
-__attribute__((used)) static inline size_t align(size_t size)
-{
-	return (size + ANTIFRAG - 1) & ~(ANTIFRAG - 1);
-}
 
 #endif

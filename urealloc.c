@@ -20,7 +20,7 @@ void *urealloc(void *ptr, size_t size)
 		return NULL;
 	}
 
-	size = align(size);
+	size = ALIGN(size);
 
 	if (ptr == NULL)
 		return umalloc(size);

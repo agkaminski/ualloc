@@ -13,7 +13,7 @@ void *umalloc(size_t size)
 	if (!size || ualloc_heap == NULL)
 		return NULL;
 
-	size = align(size);
+	size = ALIGN(size);
 
 	if (ualloc_hint == NULL)
 		ualloc_hint = ualloc_heap;

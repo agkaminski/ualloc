@@ -15,7 +15,7 @@ test.o: test.c
 ualloc.a: ualloc_init.o umalloc.o ufree.o ucalloc.o urealloc.o
 	$(CROSS)$(AR) rcs $@ $^
 
-*.o: *.c
+%.o: %.c
 	$(CROSS)$(CC) $(CFLAGS) -c -o $@ $<
 
 clean:
