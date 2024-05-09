@@ -12,7 +12,7 @@ all: test.o ualloc.a
 test.o: test.c
 	$(CROSS)$(CC) $(CFLAGS) -c $< -o $@
 
-ualloc.a: ualloc_init.o umalloc.o ufree.o ucalloc.o urealloc.o
+ualloc.a: ualloc_init.o umalloc.o ufree.o ucalloc.o urealloc.o ustat.o
 	$(CROSS)$(AR) rcs $@ $^
 
 %.o: %.c
