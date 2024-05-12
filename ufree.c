@@ -10,9 +10,6 @@ void ufree(void *ptr)
 {
 	header_t *curr, *prev = NULL;
 
-	if (ualloc_heap == NULL)
-		return;
-
 	for (curr = (header_t *)ualloc_heap; curr != NULL; prev = curr, curr = curr->next) {
 		if ((void *)curr->payload == ptr) {
 			if (prev != NULL && !FLAG(prev->size)) {

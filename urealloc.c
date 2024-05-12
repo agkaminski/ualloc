@@ -12,9 +12,6 @@ void *urealloc(void *ptr, size_t size)
 	unsigned char *buff;
 	size_t t;
 
-	if (ualloc_heap == NULL)
-		return NULL;
-
 	if (!size) {
 		ufree(ptr);
 		return NULL;

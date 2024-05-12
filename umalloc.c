@@ -10,7 +10,7 @@ void *umalloc(size_t size)
 {
 	header_t *curr, *spawn;
 
-	if (!size || ualloc_heap == NULL)
+	if (!size)
 		return NULL;
 
 	size = ALIGN(size);
